@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    environment:
+      - QDRANT__SERVICE__MAX_REQUEST_SIZE_MB=200
+      - QDRANT__SERVICE__GRPC_MAX_MESSAGE_SIZE=200000000
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
