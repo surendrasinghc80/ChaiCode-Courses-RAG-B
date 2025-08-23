@@ -5,6 +5,7 @@ import { chunkSegments } from "../utils/chunking.js";
 import { embedText } from "../services/embedding.service.js";
 import { upsertMany, query } from "../db/vectorDB.js";
 import { openai } from "../config/openai.js";
+import { buildSystemPrompt, buildUserPrompt } from "../utils/prompts.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -127,12 +128,8 @@ export const askQuestion = async (req, res) => {
       )
       .join("\n\n");
 
-    const systemPrompt = `You are a helpful teaching assistant for a Node.js video course. Answer ONLY using the provided transcript excerpts. Always:
-- Cite the relevant timestamp ranges and section names.
-- If code was mentioned, reproduce it as Markdown fenced code.
-- Be concise and accurate. If unsure, say you don't have enough context.`;
-
-    const userPrompt = `Student question: "${question}"\n\nRelevant course context:\n\n${contextBlocks}\n\nAnswer the student using only the above context. Include the best timestamps and section names.`;
+    const systemPrompt = buildSystemPrompt();
+    const userPrompt = buildUserPrompt(question, contextBlocks);
 
     if (!openai.apiKey) throw new Error("OPENAI_API_KEY not set");
 
