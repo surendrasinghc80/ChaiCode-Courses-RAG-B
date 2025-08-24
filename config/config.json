@@ -1,0 +1,20 @@
+{
+  "development": {
+    "username": "root",
+    "password": "74107410",
+    "database": "chaicode_rag",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "test": {
+    "username": "root",
+    "password": "74107410",
+    "database": "chaicode_rag_test",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "production": {
+    "use_env_variable": "DATABASE_URL",
+    "dialect": "mysql"
+  }
+}
