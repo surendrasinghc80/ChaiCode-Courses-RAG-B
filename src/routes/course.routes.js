@@ -2,7 +2,14 @@ import { Router } from "express";
 import multer from "multer";
 import os from "os";
 import path from "path";
-import { askQuestion, uploadVtt } from "../controllers/course.controller.js";
+import {
+  askQuestion,
+  uploadVtt,
+  getRagStats,
+  signup,
+  login,
+} from "../controllers/course.controller.js";
+import { authenticateToken, optionalAuth } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -21,14 +28,23 @@ const upload = multer({
   },
 });
 
-// Upload VTT route
+// Upload VTT route (protected)
 router.post(
   "/upload-vtt",
+  authenticateToken,
   upload.array("files", 50), // frontend must send field name as `files`
   uploadVtt
 );
 
-// Ask a question route
-router.post("/ask", askQuestion);
+// Ask a question route (protected)
+router.post("/ask", authenticateToken, askQuestion);
+
+// Get RAG usage statistics (protected)
+router.get("/rag-stats/:userId", authenticateToken, getRagStats);
+router.get("/rag-stats", authenticateToken, getRagStats);
+
+// Authentication routes (public)
+router.post("/signup", signup);
+router.post("/login", login);
 
 export default router;
