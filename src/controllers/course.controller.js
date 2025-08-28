@@ -8,6 +8,7 @@ import { openai } from "../config/openai.js";
 import { buildSystemPrompt, buildUserPrompt } from "../utils/prompts.js";
 import Chat from "../models/Chat.js";
 import User from "../models/User.js";
+import Conversation from "../models/Conversation.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { Op } from "sequelize";
@@ -111,7 +112,7 @@ export const uploadVtt = async (req, res) => {
 
 export const askQuestion = async (req, res) => {
   try {
-    const { question, section } = req.body;
+    const { question, section, conversationId } = req.body;
     if (!question) {
       return res.status(400).json({ error: "question is required" });
     }
@@ -119,9 +120,43 @@ export const askQuestion = async (req, res) => {
     // Use authenticated user ID from middleware
     const currentUserId = req.user.id;
 
+    let targetConversationId = conversationId;
+
+    // If no conversationId provided, create a new conversation
+    if (!targetConversationId) {
+      const newConversation = await Conversation.create({
+        userId: currentUserId,
+        title: question.length > 50 ? question.substring(0, 50) + "..." : question,
+        lastMessageAt: new Date(),
+        metadata: {
+          section: section || "general",
+          ragEnabled: true
+        }
+      });
+      targetConversationId = newConversation.id;
+    } else {
+      // Verify conversation belongs to user and update lastMessageAt
+      const conversation = await Conversation.findOne({
+        where: {
+          id: targetConversationId,
+          userId: currentUserId,
+          isActive: true
+        }
+      });
+      
+      if (!conversation) {
+        return res.status(404).json({ 
+          success: false, 
+          error: "Conversation not found or access denied" 
+        });
+      }
+      
+      await conversation.update({ lastMessageAt: new Date() });
+    }
+
     // Store user question in database for RAG context
     const userChat = await Chat.create({
-      conversationId: `rag_${currentUserId}_${Date.now()}`,
+      conversationId: targetConversationId,
       userId: currentUserId,
       message: question,
       role: "user",
@@ -189,7 +224,7 @@ export const askQuestion = async (req, res) => {
 
     // Store AI response in database
     await Chat.create({
-      conversationId: userChat.conversationId,
+      conversationId: targetConversationId,
       userId: currentUserId,
       message: answer,
       role: "assistant",
@@ -204,20 +239,24 @@ export const askQuestion = async (req, res) => {
     });
 
     return res.json({
-      answer,
-      userId: currentUserId,
-      conversationId: userChat.conversationId,
-      references: hits.map((h) => ({
-        section: h.metadata.section,
-        file: h.metadata.file,
-        start: h.metadata.start,
-        end: h.metadata.end,
-        score: h.score,
-      })),
-      usage: {
-        tokensUsed: completion.usage?.total_tokens || 0,
-        previousQuestions: previousQuestions.length,
-      },
+      success: true,
+      data: {
+        answer,
+        userId: currentUserId,
+        conversationId: targetConversationId,
+        messageId: userChat.id,
+        references: hits.map((h) => ({
+          section: h.metadata.section,
+          file: h.metadata.file,
+          start: h.metadata.start,
+          end: h.metadata.end,
+          score: h.score,
+        })),
+        usage: {
+          tokensUsed: completion.usage?.total_tokens || 0,
+          previousQuestions: previousQuestions.length,
+        },
+      }
     });
   } catch (err) {
     console.error("/ask error:", err);

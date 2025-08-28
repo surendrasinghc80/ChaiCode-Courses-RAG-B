@@ -50,4 +50,16 @@ const User = sequelize.define('User', {
   timestamps: true
 });
 
+// Define associations
+User.associate = (models) => {
+  User.hasMany(models.Conversation, { 
+    foreignKey: 'userId',
+    as: 'conversations'
+  });
+  User.hasMany(models.Chat, { 
+    foreignKey: 'userId',
+    as: 'chats'
+  });
+};
+
 export default User;

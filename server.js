@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import courseRoutes from "./src/routes/course.routes.js";
+import conversationRoutes from "./src/routes/conversation.routes.js";
 import { sequelize, testConnection } from "./src/config/database.js";
 
 dotenv.config();
@@ -13,12 +14,14 @@ app.use(express.json({ limit: "10mb" }));
 
 app.get("/health", (req, res) => res.json({ ok: true }));
 app.use("/api/course", courseRoutes);
+app.use("/api/conversations", conversationRoutes);
 
 // Initialize database connection and sync models
 const initializeDatabase = async () => {
   try {
     await testConnection();
-    await sequelize.sync({ alter: true }); // Use { force: true } to recreate tables
+    // Use basic sync without alter to avoid too many keys error
+    await sequelize.sync({ force: false }); 
     console.log("✅ Database synchronized successfully.");
   } catch (error) {
     console.error("❌ Database initialization failed:", error);

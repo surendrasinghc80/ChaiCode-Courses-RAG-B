@@ -11,12 +11,18 @@ const Chat = sequelize.define('Chat', {
   conversationId: {
     type: DataTypes.UUID,
     allowNull: false,
-    defaultValue: () => uuidv4()
+    references: {
+      model: 'conversations',
+      key: 'id'
+    }
   },
   userId: {
-    type: DataTypes.UUID,
-    allowNull: true, // Can be null for anonymous users
-    defaultValue: () => uuidv4()
+    type: DataTypes.INTEGER, // Match User model's ID type
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id'
+    }
   },
   message: {
     type: DataTypes.TEXT,
@@ -45,21 +51,26 @@ const Chat = sequelize.define('Chat', {
   timestamps: true,
   indexes: [
     {
-      fields: ['conversationId']
+      fields: ['conversationId'],
+      name: 'idx_chat_conversation_id'
     },
     {
-      fields: ['userId']
-    },
-    {
-      fields: ['timestamp']
+      fields: ['userId'],
+      name: 'idx_chat_user_id'
     }
   ]
 });
 
-// Define associations if needed
+// Define associations
 Chat.associate = (models) => {
-  // Add associations here when you have User model
-  // Chat.belongsTo(models.User, { foreignKey: 'userId' });
+  Chat.belongsTo(models.User, { 
+    foreignKey: 'userId',
+    as: 'user'
+  });
+  Chat.belongsTo(models.Conversation, { 
+    foreignKey: 'conversationId',
+    as: 'conversation'
+  });
 };
 
 export default Chat;
