@@ -5,7 +5,7 @@ import {
   getConversation,
   updateConversation,
   deleteConversation,
-  getConversationStats
+  getConversationStats,
 } from "../controllers/conversation.controller.js";
 import { authenticateToken } from "../middleware/auth.js";
 
@@ -27,7 +27,7 @@ router.get("/stats", getConversationStats);
 router.get("/:conversationId", getConversation);
 
 // Update conversation (title, etc.)
-router.put("/:conversationId", updateConversation);
+router.post("/:conversationId", updateConversation);
 
 // Delete conversation (soft delete)
 router.delete("/:conversationId", deleteConversation);
