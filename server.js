@@ -4,6 +4,7 @@ import cors from "cors";
 import courseRoutes from "./src/routes/course.routes.js";
 import conversationRoutes from "./src/routes/conversation.routes.js";
 import { sequelize, testConnection } from "./src/config/database.js";
+import "./src/models/index.js"; // Initialize model associations
 
 dotenv.config();
 
@@ -21,7 +22,7 @@ const initializeDatabase = async () => {
   try {
     await testConnection();
     // Use basic sync without alter to avoid too many keys error
-    await sequelize.sync({ force: false }); 
+    await sequelize.sync({ force: false });
     console.log("✅ Database synchronized successfully.");
   } catch (error) {
     console.error("❌ Database initialization failed:", error);
