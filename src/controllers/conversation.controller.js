@@ -133,7 +133,7 @@ export const getConversation = async (req, res) => {
           model: Chat,
           as: "messages",
           attributes: ["id", "message", "role", "timestamp", "metadata"],
-          order: [["timestamp", "ASC"]],
+          order: [["timestamp", "DESC"]],
         },
       ],
     });
@@ -145,6 +145,9 @@ export const getConversation = async (req, res) => {
       });
     }
 
+    // Reverse messages to show oldest first, newest last (chronological order)
+    const sortedMessages = [...conversation.messages].reverse();
+
     res.json({
       success: true,
       data: {
@@ -154,7 +157,7 @@ export const getConversation = async (req, res) => {
           lastMessageAt: conversation.lastMessageAt,
           isActive: conversation.isActive,
           createdAt: conversation.createdAt,
-          messages: conversation.messages,
+          messages: sortedMessages,
         },
       },
     });

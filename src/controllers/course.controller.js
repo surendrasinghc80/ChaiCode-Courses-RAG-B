@@ -126,12 +126,13 @@ export const askQuestion = async (req, res) => {
     if (!targetConversationId) {
       const newConversation = await Conversation.create({
         userId: currentUserId,
-        title: question.length > 50 ? question.substring(0, 50) + "..." : question,
+        title:
+          question.length > 50 ? question.substring(0, 50) + "..." : question,
         lastMessageAt: new Date(),
         metadata: {
           section: section || "general",
-          ragEnabled: true
-        }
+          ragEnabled: true,
+        },
       });
       targetConversationId = newConversation.id;
     } else {
@@ -140,17 +141,17 @@ export const askQuestion = async (req, res) => {
         where: {
           id: targetConversationId,
           userId: currentUserId,
-          isActive: true
-        }
+          isActive: true,
+        },
       });
-      
+
       if (!conversation) {
-        return res.status(404).json({ 
-          success: false, 
-          error: "Conversation not found or access denied" 
+        return res.status(404).json({
+          success: false,
+          error: "Conversation not found or access denied",
         });
       }
-      
+
       await conversation.update({ lastMessageAt: new Date() });
     }
 
@@ -222,7 +223,15 @@ export const askQuestion = async (req, res) => {
     const answer =
       completion.choices?.[0]?.message?.content || "No answer generated.";
 
-    // Store AI response in database
+    // Store AI response in database with references
+    const referencesData = hits.map((h) => ({
+      section: h.metadata.section,
+      file: h.metadata.file,
+      start: h.metadata.start,
+      end: h.metadata.end,
+      score: h.score,
+    }));
+
     await Chat.create({
       conversationId: targetConversationId,
       userId: currentUserId,
@@ -234,6 +243,7 @@ export const askQuestion = async (req, res) => {
         tokensUsed: completion.usage?.total_tokens || 0,
         model: CHAT_MODEL,
         referencesCount: hits.length,
+        references: referencesData, // Store the actual references
       },
       vectorId: hits.length > 0 ? hits[0].id : null,
     });
@@ -256,7 +266,7 @@ export const askQuestion = async (req, res) => {
           tokensUsed: completion.usage?.total_tokens || 0,
           previousQuestions: previousQuestions.length,
         },
-      }
+      },
     });
   } catch (err) {
     console.error("/ask error:", err);
