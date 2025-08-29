@@ -9,6 +9,14 @@ export const archiveConversation = async (req, res) => {
     const { title, description, tags } = req.body;
     const userId = req.user.id;
 
+    console.log("Archive request:", {
+      conversationId,
+      userId,
+      title,
+      description,
+      tags,
+    });
+
     // Check if conversation exists and belongs to user
     const conversationExists = await Chat.findOne({
       where: {
@@ -17,12 +25,7 @@ export const archiveConversation = async (req, res) => {
       },
     });
 
-    if (!conversationExists) {
-      return res.status(404).json({
-        success: false,
-        message: "Conversation not found or access denied",
-      });
-    }
+    console.log("Conversation exists:", conversationExists ? "Yes" : "No");
 
     // Get message count for the conversation
     const messageCount = await Chat.count({
@@ -31,6 +34,16 @@ export const archiveConversation = async (req, res) => {
         userId,
       },
     });
+
+    console.log("Message count:", messageCount);
+
+    // If no messages exist, we can't archive an empty conversation
+    if (messageCount === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot archive conversation with no messages",
+      });
+    }
 
     // Check if already archived
     const existingArchive = await Archive.findByUserIdAndConversationId(
@@ -45,12 +58,22 @@ export const archiveConversation = async (req, res) => {
     }
 
     // Create archive entry
-    const archive = await Archive.create({
-      userId,
-      conversationId,
+    console.log("Creating archive with data:", {
+      userId: String(userId),
+      conversationId: String(conversationId),
       title: title || `Conversation ${conversationId}`,
       description: description || null,
-      tags: tags || [],
+      tags: Array.isArray(tags) ? tags : [],
+      messageCount,
+      archivedAt: new Date(),
+    });
+
+    const archive = await Archive.create({
+      userId: String(userId),
+      conversationId: String(conversationId),
+      title: title || `Conversation ${conversationId}`,
+      description: description || null,
+      tags: Array.isArray(tags) ? tags : [],
       messageCount,
       archivedAt: new Date(),
       metadata: {
@@ -76,10 +99,31 @@ export const archiveConversation = async (req, res) => {
     });
   } catch (error) {
     console.error("Archive conversation error:", error);
+    console.error("Error details:", {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      errors: error.errors, // Sequelize validation errors
+    });
+
+    // Handle Sequelize validation errors specifically
+    if (error.name === "SequelizeValidationError") {
+      return res.status(400).json({
+        success: false,
+        message: "Validation error",
+        error:
+          error.errors?.map((e) => `${e.path}: ${e.message}`).join(", ") ||
+          error.message,
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: "Failed to archive conversation",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : "Internal server error",
     });
   }
 };
