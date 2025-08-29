@@ -167,6 +167,11 @@ export const askQuestion = async (req, res) => {
       },
     });
 
+    // Increment user message count (only for regular users, not admins)
+    if (req.user.role !== "admin") {
+      await User.increment("messageCount", { where: { id: currentUserId } });
+    }
+
     // Get previous questions from this user for better context
     const previousQuestions = await Chat.findAll({
       where: {

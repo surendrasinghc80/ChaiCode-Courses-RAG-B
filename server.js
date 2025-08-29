@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import courseRoutes from "./src/routes/course.routes.js";
 import conversationRoutes from "./src/routes/conversation.routes.js";
+import adminRoutes from "./src/routes/admin.routes.js";
 import { sequelize, testConnection } from "./src/config/database.js";
 import "./src/models/index.js"; // Initialize model associations
 
@@ -16,6 +17,7 @@ app.use(express.json({ limit: "10mb" }));
 app.get("/health", (req, res) => res.json({ ok: true }));
 app.use("/api/course", courseRoutes);
 app.use("/api/conversations", conversationRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Initialize database connection and sync models
 const initializeDatabase = async () => {

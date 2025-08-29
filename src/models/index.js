@@ -2,10 +2,7 @@ import { sequelize } from "../config/database.js";
 import User from "./User.js";
 import Conversation from "./Conversation.js";
 import Chat from "./Chat.js";
-import ArchiveFactory from "../../models/Archive.js";
-
-// Initialize Archive model
-const Archive = ArchiveFactory(sequelize);
+import Archive from "./Archive.js";
 
 // Initialize models object
 const models = {

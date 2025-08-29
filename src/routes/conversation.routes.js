@@ -32,6 +32,16 @@ router.get("/", getUserConversations);
 // Get conversation statistics
 router.get("/stats", getConversationStats);
 
+// Archive Routes (must come before /:conversationId to avoid conflicts)
+// Get all user archives
+router.get("/archives", getUserArchives); // Fixed - moved before /:conversationId
+
+// Get archive statistics
+router.get("/archives/stats", getArchiveStats); // Working
+
+// Archive a conversation
+router.post("/:conversationId/archive", archiveConversation); // working
+
 // Get specific conversation with messages
 router.get("/:conversationId", getConversation);
 
@@ -41,26 +51,16 @@ router.post("/:conversationId", updateConversation);
 // Delete conversation (soft delete)
 router.delete("/:conversationId", deleteConversation);
 
-// Archive Routes
-// Archive a conversation
-router.post("/:conversationId/archive", archiveConversation);
-
-// Get all user archives
-router.get("/archives", getUserArchives);
-
-// Get archive statistics
-router.get("/archives/stats", getArchiveStats);
-
 // Get specific archived conversation
-router.get("/archives/:archiveId", getArchivedConversation);
+router.get("/archives/:archiveId", getArchivedConversation); // working
 
 // Update archived conversation
-router.put("/archives/:archiveId", updateArchivedConversation);
+router.post("/archives/:archiveId", updateArchivedConversation); // Working
 
 // Delete archived conversation
-router.delete("/archives/:archiveId", deleteArchivedConversation);
+router.delete("/archives/:archiveId", deleteArchivedConversation); // Working
 
 // Unarchive conversation
-router.post("/archives/:archiveId/unarchive", unarchiveConversation);
+router.post("/archives/:archiveId/unarchive", unarchiveConversation); //Working
 
 export default router;

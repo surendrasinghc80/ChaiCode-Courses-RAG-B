@@ -108,8 +108,8 @@ export const getUserArchives = async (req, res) => {
     // Add search functionality
     if (search) {
       whereConditions[Op.or] = [
-        { title: { [Op.iLike]: `%${search}%` } },
-        { description: { [Op.iLike]: `%${search}%` } },
+        { title: { [Op.like]: `%${search}%` } },
+        { description: { [Op.like]: `%${search}%` } },
       ];
     }
 
@@ -117,7 +117,7 @@ export const getUserArchives = async (req, res) => {
     if (tags) {
       const tagArray = tags.split(",").map((tag) => tag.trim());
       whereConditions.tags = {
-        [Op.overlap]: tagArray,
+        [Op.regexp]: tagArray.map((tag) => `"${tag}"`).join("|"),
       };
     }
 
@@ -398,15 +398,17 @@ export const getArchiveStats = async (req, res) => {
       },
       attributes: [
         [
-          sequelize.fn("DATE_TRUNC", "month", sequelize.col("archivedAt")),
+          sequelize.fn("DATE_FORMAT", sequelize.col("archivedAt"), "%Y-%m-01"),
           "month",
         ],
         [sequelize.fn("COUNT", "*"), "count"],
       ],
-      group: [sequelize.fn("DATE_TRUNC", "month", sequelize.col("archivedAt"))],
+      group: [
+        sequelize.fn("DATE_FORMAT", sequelize.col("archivedAt"), "%Y-%m-01"),
+      ],
       order: [
         [
-          sequelize.fn("DATE_TRUNC", "month", sequelize.col("archivedAt")),
+          sequelize.fn("DATE_FORMAT", sequelize.col("archivedAt"), "%Y-%m-01"),
           "ASC",
         ],
       ],

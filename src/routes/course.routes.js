@@ -9,7 +9,7 @@ import {
   signup,
   login,
 } from "../controllers/course.controller.js";
-import { authenticateToken, optionalAuth } from "../middleware/auth.js";
+import { authenticateToken, optionalAuth, requireAdmin, checkMessageLimit } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -28,16 +28,17 @@ const upload = multer({
   },
 });
 
-// Upload VTT route (protected)
+// Upload VTT route (admin only)
 router.post(
   "/upload-vtt",
   authenticateToken,
+  requireAdmin,
   upload.array("files", 50), // frontend must send field name as `files`
   uploadVtt
 );
 
-// Ask a question route (protected)
-router.post("/ask", authenticateToken, askQuestion);
+// Ask a question route (protected with message limit)
+router.post("/ask", authenticateToken, checkMessageLimit, askQuestion);
 
 // Get RAG usage statistics (protected)
 router.get("/rag-stats/:userId", authenticateToken, getRagStats);
