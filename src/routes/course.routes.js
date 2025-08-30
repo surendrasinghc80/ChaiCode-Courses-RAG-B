@@ -8,6 +8,13 @@ import {
   getRagStats,
   signup,
   login,
+  createCourse,
+  getCourses,
+  grantCourseAccess,
+  getUserCourses,
+  updateCourse,
+  deleteCourse,
+  revokeCourseAccess,
 } from "../controllers/course.controller.js";
 import { authenticateToken, optionalAuth, requireAdmin, checkMessageLimit } from "../middleware/auth.js";
 
@@ -43,6 +50,20 @@ router.post("/ask", authenticateToken, checkMessageLimit, askQuestion);
 // Get RAG usage statistics (protected)
 router.get("/rag-stats/:userId", authenticateToken, getRagStats);
 router.get("/rag-stats", authenticateToken, getRagStats);
+
+// Course management routes (admin only)
+router.post("/courses", authenticateToken, requireAdmin, createCourse);
+router.get("/courses", authenticateToken, getCourses);
+router.put("/courses/:courseId", authenticateToken, requireAdmin, updateCourse);
+router.delete("/courses/:courseId", authenticateToken, requireAdmin, deleteCourse);
+
+// User course access management (admin only)
+router.post("/grant-access", authenticateToken, requireAdmin, grantCourseAccess);
+router.post("/revoke-access", authenticateToken, requireAdmin, revokeCourseAccess);
+
+// User course access (user can view their own, admin can view any)
+router.get("/user-courses/:userId", authenticateToken, getUserCourses);
+router.get("/user-courses", authenticateToken, getUserCourses);
 
 // Authentication routes (public)
 router.post("/signup", signup);
