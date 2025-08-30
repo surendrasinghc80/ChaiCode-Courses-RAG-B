@@ -5,6 +5,7 @@ import courseRoutes from "./src/routes/course.routes.js";
 import conversationRoutes from "./src/routes/conversation.routes.js";
 import adminRoutes from "./src/routes/admin.routes.js";
 import { sequelize, testConnection } from "./src/config/database.js";
+import { initializeQdrant } from "./src/db/vectorDB.js";
 import "./src/models/index.js"; // Initialize model associations
 
 dotenv.config();
@@ -31,8 +32,14 @@ const initializeDatabase = async () => {
   }
 };
 
+// Initialize all services
+const initializeServices = async () => {
+  await initializeDatabase();
+  await initializeQdrant();
+};
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log(`Server is running on :=> http://localhost:${PORT}`);
-  await initializeDatabase();
+  await initializeServices();
 });

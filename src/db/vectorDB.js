@@ -9,7 +9,30 @@ const client = new QdrantClient({
 
 const COLLECTION = process.env.QDRANT_COLLECTION || "course_vectors";
 
-// Ensure collection exists
+// Initialize Qdrant collection and indexes on startup
+export async function initializeQdrant() {
+  try {
+    console.log(`🚀 Initializing Qdrant collection: ${COLLECTION}`);
+    
+    // Check if collection exists
+    const collections = await client.getCollections();
+    const exists = collections.collections.some((c) => c.name === COLLECTION);
+    
+    if (!exists) {
+      console.log(`📦 Collection ${COLLECTION} does not exist, will be created on first upsert`);
+      return;
+    }
+    
+    console.log(`📦 Collection ${COLLECTION} exists, creating indexes...`);
+    await createIndexes();
+    
+  } catch (error) {
+    console.error("Failed to initialize Qdrant:", error);
+    throw error;
+  }
+}
+
+// Ensure collection exists with proper indexing
 export async function ensureCollection(dim) {
   const collections = await client.getCollections();
   const exists = collections.collections.some((c) => c.name === COLLECTION);
@@ -22,6 +45,70 @@ export async function ensureCollection(dim) {
       },
     });
     console.log(`✅ Created Qdrant collection: ${COLLECTION}`);
+
+    // Create indexes for filtering fields
+    await createIndexes();
+  } else {
+    // Ensure indexes exist even if collection already exists
+    await createIndexes();
+  }
+}
+
+// Create necessary indexes for filtering
+async function createIndexes() {
+  try {
+    console.log(`🔧 Creating Qdrant indexes for collection: ${COLLECTION}`);
+    
+    // Create keyword index for course_id filtering
+    try {
+      await client.createPayloadIndex(COLLECTION, {
+        field_name: "course_id",
+        field_schema: "keyword",
+      });
+      console.log(`✅ Created course_id index`);
+    } catch (error) {
+      if (error.message?.includes("already exists") || error.message?.includes("Index already exists")) {
+        console.log(`✅ course_id index already exists`);
+      } else {
+        console.error("Error creating course_id index:", error.message);
+        throw error;
+      }
+    }
+
+    // Create keyword index for section filtering
+    try {
+      await client.createPayloadIndex(COLLECTION, {
+        field_name: "section",
+        field_schema: "keyword",
+      });
+      console.log(`✅ Created section index`);
+    } catch (error) {
+      if (error.message?.includes("already exists") || error.message?.includes("Index already exists")) {
+        console.log(`✅ section index already exists`);
+      } else {
+        console.warn("Warning creating section index:", error.message);
+      }
+    }
+
+    // Create keyword index for topic filtering
+    try {
+      await client.createPayloadIndex(COLLECTION, {
+        field_name: "topic",
+        field_schema: "keyword",
+      });
+      console.log(`✅ Created topic index`);
+    } catch (error) {
+      if (error.message?.includes("already exists") || error.message?.includes("Index already exists")) {
+        console.log(`✅ topic index already exists`);
+      } else {
+        console.warn("Warning creating topic index:", error.message);
+      }
+    }
+
+    console.log(`✅ Qdrant index creation completed for ${COLLECTION}`);
+  } catch (error) {
+    console.error("Critical error in index creation:", error);
+    throw error;
   }
 }
 
@@ -51,12 +138,17 @@ export async function upsertMany(records, courseInfo = {}) {
     })),
   });
 
-  console.log(`✅ Inserted ${records.length} vectors for course ${courseInfo.courseId} into Qdrant`);
+  console.log(
+    `✅ Inserted ${records.length} vectors for course ${courseInfo.courseId} into Qdrant`
+  );
   return records.length;
 }
 
 // Query similar vectors with course filtering
-export async function query(embedding, { topK = 5, filter = {}, courseIds = [] } = {}) {
+export async function query(
+  embedding,
+  { topK = 5, filter = {}, courseIds = [] } = {}
+) {
   let searchFilter = undefined;
 
   // Build filter conditions
@@ -67,12 +159,12 @@ export async function query(embedding, { topK = 5, filter = {}, courseIds = [] }
     if (courseIds.length === 1) {
       filterConditions.push({
         key: "course_id",
-        match: { value: courseIds[0] }
+        match: { value: courseIds[0] },
       });
     } else {
       filterConditions.push({
         key: "course_id",
-        match: { any: courseIds }
+        match: { any: courseIds },
       });
     }
   }
@@ -82,12 +174,12 @@ export async function query(embedding, { topK = 5, filter = {}, courseIds = [] }
     if (Array.isArray(value)) {
       filterConditions.push({
         key,
-        match: { any: value }
+        match: { any: value },
       });
     } else {
       filterConditions.push({
         key,
-        match: { value }
+        match: { value },
       });
     }
   });
@@ -95,7 +187,7 @@ export async function query(embedding, { topK = 5, filter = {}, courseIds = [] }
   // Set up filter if we have conditions
   if (filterConditions.length > 0) {
     searchFilter = {
-      must: filterConditions
+      must: filterConditions,
     };
   }
 
@@ -121,7 +213,7 @@ export async function getCollectionStats() {
       vectorsCount: info.vectors_count,
       indexedVectorsCount: info.indexed_vectors_count,
       pointsCount: info.points_count,
-      status: info.status
+      status: info.status,
     };
   } catch (error) {
     console.error("Error getting collection stats:", error);
@@ -134,19 +226,21 @@ export async function getVectorsByCourse(courseId, limit = 100) {
   try {
     const results = await client.scroll(COLLECTION, {
       filter: {
-        must: [{
-          key: "course_id",
-          match: { value: courseId }
-        }]
+        must: [
+          {
+            key: "course_id",
+            match: { value: courseId },
+          },
+        ],
       },
       limit,
       with_payload: true,
-      with_vector: false
+      with_vector: false,
     });
 
-    return results.points.map(point => ({
+    return results.points.map((point) => ({
       id: point.id,
-      payload: point.payload
+      payload: point.payload,
     }));
   } catch (error) {
     console.error("Error getting vectors by course:", error);
@@ -159,11 +253,13 @@ export async function deleteVectorsByCourse(courseId) {
   try {
     await client.delete(COLLECTION, {
       filter: {
-        must: [{
-          key: "course_id",
-          match: { value: courseId }
-        }]
-      }
+        must: [
+          {
+            key: "course_id",
+            match: { value: courseId },
+          },
+        ],
+      },
     });
     console.log(`✅ Deleted vectors for course ${courseId} from Qdrant`);
     return true;
